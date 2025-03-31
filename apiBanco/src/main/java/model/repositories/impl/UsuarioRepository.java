@@ -16,8 +16,19 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
     }
 
     public static UsuarioRepository getInstance() {
-        if(instance == null) instance = new UsuarioRepository();
+        if (instance == null) instance = new UsuarioRepository();
         return instance;
+    }
+
+    private Optional<UsuarioEntity> resultToUsuario(ResultSet rs) throws SQLException {
+        return Optional.of(new UsuarioEntity(
+                rs.getInt("id"),
+                rs.getString("nombre"),
+                rs.getString("apellido"),
+                rs.getString("dni"),
+                rs.getString("email"),
+                rs.getTimestamp("fecha_creacion").toLocalDateTime()
+        ));
     }
 
     @Override
@@ -26,14 +37,17 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
                 "email, fecha_creacion) VALUES (?, ?, ?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement
-                     (sql)) {
+                     (sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, entity.getNombre());
             ps.setString(2, entity.getApellido());
             ps.setString(3, entity.getDni());
             ps.setString(4, entity.getEmail());
-            ps.setDate(5, Date.valueOf(entity.getFecha_creacion()));
+            ps.setTimestamp(5, Timestamp.valueOf(entity.getFecha_creacion()));
             ps.executeUpdate();
-            entity.setId(PreparedStatement.RETURN_GENERATED_KEYS);
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next())
+                    entity.setId(rs.getInt(1));
+            }
         }
     }
 
@@ -53,16 +67,6 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
         }
     }
 
-    public Optional<UsuarioEntity> resultToUsuario(ResultSet rs) throws SQLException {
-        return Optional.of(new UsuarioEntity(
-                rs.getInt("id"),
-                rs.getString("nombre"),
-                rs.getString("apellido"),
-                rs.getString("dni"),
-                rs.getString("email"),
-                rs.getDate("fecha_creacion").toLocalDate()
-        ));
-    }
 
     @Override
     public Optional<UsuarioEntity> findByID(Integer id) throws SQLException {
@@ -83,8 +87,8 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
     @Override
     public void deleteByID(Integer id) throws SQLException {
         String sql = "DELETE FROM usuarios WHERE id = ?";
-        try(Connection connection = ConexionSQLite.getConnection();
-        PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection connection = ConexionSQLite.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
@@ -95,12 +99,12 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
         String sql = "UPDATE usuarios SET nombre = ?, apellido = ?," +
                 " dni = ?, email = ?, fecha_creacion = ? WHERE id = ?";
         try (Connection connection = ConexionSQLite.getConnection();
-        PreparedStatement ps = connection.prepareStatement(sql)) {
+             PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, entity.getNombre());
             ps.setString(2, entity.getApellido());
             ps.setString(3, entity.getDni());
             ps.setString(4, entity.getEmail());
-            ps.setDate(5, Date.valueOf(entity.getFecha_creacion()));
+            ps.setTimestamp(5, Timestamp.valueOf(entity.getFecha_creacion()));
             ps.setInt(6, entity.getId());
             ps.executeUpdate();
         }

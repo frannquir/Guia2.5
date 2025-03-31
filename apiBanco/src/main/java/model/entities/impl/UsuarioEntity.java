@@ -1,6 +1,7 @@
 package model.entities.impl;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -11,11 +12,11 @@ public class UsuarioEntity {
     private String apellido;
     private String dni;
     private String email;
-    private LocalDate fecha_creacion;
+    private LocalDateTime fecha_creacion;
     private List<CuentaEntity> cuentas;
 
     public UsuarioEntity(Integer id, String nombre, String apellido,
-                         String dni, String email, LocalDate fecha_creacion) {
+                         String dni, String email, LocalDateTime fecha_creacion) {
         this.id = id;
         this.nombre = nombre;
         this.apellido = apellido;
@@ -25,7 +26,7 @@ public class UsuarioEntity {
         cuentas = new ArrayList<>();
     }
     public UsuarioEntity(String nombre, String apellido, String dni,
-                         String email, LocalDate fecha_creacion) {
+                         String email, LocalDateTime fecha_creacion) {
         this.nombre = nombre;
         this.apellido = apellido;
         this.dni =dni;
@@ -77,11 +78,11 @@ public class UsuarioEntity {
         this.email = email;
     }
 
-    public LocalDate getFecha_creacion() {
+    public LocalDateTime getFecha_creacion() {
         return fecha_creacion;
     }
 
-    public void setFecha_creacion(LocalDate fecha_creacion) {
+    public void setFecha_creacion(LocalDateTime fecha_creacion) {
         this.fecha_creacion = fecha_creacion;
     }
 
