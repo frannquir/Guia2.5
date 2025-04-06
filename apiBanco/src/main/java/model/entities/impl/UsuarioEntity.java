@@ -26,12 +26,11 @@ public class UsuarioEntity {
         cuentas = new ArrayList<>();
     }
     public UsuarioEntity(String nombre, String apellido, String dni,
-                         String email, LocalDateTime fecha_creacion) {
+                         String email) {
         this.nombre = nombre;
         this.apellido = apellido;
         this.dni =dni;
         this.email = email;
-        this.fecha_creacion = fecha_creacion;
         cuentas = new ArrayList<>();
     }
     public UsuarioEntity() {

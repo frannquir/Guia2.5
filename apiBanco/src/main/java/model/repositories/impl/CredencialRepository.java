@@ -2,12 +2,9 @@ package model.repositories.impl;
 
 import model.entities.enums.EPermiso;
 import model.entities.impl.CredencialEntity;
-import model.entities.impl.CuentaEntity;
-import model.entities.impl.UsuarioEntity;
 import model.repositories.ConexionSQLite;
 import model.repositories.interfaces.IRepository;
 
-import javax.security.auth.login.CredentialNotFoundException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +24,7 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
     private Optional<CredencialEntity> resultToCredencial(ResultSet rs) throws SQLException {
         return Optional.of(new CredencialEntity(
                 rs.getInt("id"),
-                rs.getInt("alumnoId"),
+                rs.getInt("usuarioID"),
                 rs.getString("username"),
                 rs.getString("password"),
                 EPermiso.valueOf(rs.getString("permiso"))
@@ -36,11 +33,11 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public void save(CredencialEntity entity) throws SQLException {
-        String sql = "INSERT INTO credenciales (alumnoId, username, password, permiso) " +
+        String sql = "INSERT INTO credenciales (usuarioId, username, password, permiso) " +
                 "VALUES (?, ?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, entity.getAlumnoId());
+            ps.setInt(1, entity.getUsuarioId());
             ps.setString(2, entity.getUsername());
             ps.setString(3, entity.getPassword());
             ps.setString(4, entity.getPermiso().name());
@@ -96,11 +93,11 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public void update(CredencialEntity entity) throws SQLException {
-        String sql = "UPDATE credenciales SET alumnoId = ?, " +
+        String sql = "UPDATE credenciales SET usuarioId = ?, " +
                 "username = ?, password = ?, permiso = ? WHERE id = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, entity.getAlumnoId());
+            ps.setInt(1, entity.getUsuarioId());
             ps.setString(2, entity.getUsername());
             ps.setString(3, entity.getPassword());
             ps.setString(4, entity.getPermiso().name());

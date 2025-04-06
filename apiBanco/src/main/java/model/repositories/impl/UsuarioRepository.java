@@ -42,7 +42,6 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
             ps.setString(2, entity.getApellido());
             ps.setString(3, entity.getDni());
             ps.setString(4, entity.getEmail());
-            ps.setTimestamp(5, Timestamp.valueOf(entity.getFecha_creacion()));
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next())

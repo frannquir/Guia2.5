@@ -6,20 +6,20 @@ import java.util.Objects;
 
 public class CredencialEntity {
     private Integer id;
-    private Integer alumnoId;
+    private Integer usuarioId;
     private String username;
     private String password;
     private EPermiso permiso;
 
-    public CredencialEntity(Integer id, Integer alumnoId, String username, String password, EPermiso permiso) {
+    public CredencialEntity(Integer id, Integer usuarioId, String username, String password, EPermiso permiso) {
         this.id = id;
-        this.alumnoId = alumnoId;
+        this.usuarioId = usuarioId;
         this.username = username;
         this.password = password;
         this.permiso = permiso;
     }
-    public CredencialEntity(Integer alumnoId, String username, String password, EPermiso permiso) {
-        this.alumnoId = alumnoId;
+    public CredencialEntity(Integer usuarioId, String username, String password, EPermiso permiso) {
+        this.usuarioId = usuarioId;
         this.username = username;
         this.password = password;
         this.permiso = permiso;
@@ -52,12 +52,12 @@ public class CredencialEntity {
         this.username = username;
     }
 
-    public Integer getAlumnoId() {
-        return alumnoId;
+    public Integer getUsuarioId() {
+        return usuarioId;
     }
 
-    public void setAlumnoId(Integer alumnoId) {
-        this.alumnoId = alumnoId;
+    public void setUsuarioId(Integer usuarioId) {
+        this.usuarioId = usuarioId;
     }
 
     public Integer getId() {
@@ -72,11 +72,11 @@ public class CredencialEntity {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         CredencialEntity that = (CredencialEntity) o;
-        return Objects.equals(id, that.id) && Objects.equals(alumnoId, that.alumnoId) && Objects.equals(username, that.username);
+        return Objects.equals(id, that.id) && Objects.equals(usuarioId, that.usuarioId) && Objects.equals(username, that.username);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, alumnoId, username);
+        return Objects.hash(id, usuarioId, username);
     }
 }
