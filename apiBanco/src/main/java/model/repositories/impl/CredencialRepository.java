@@ -105,4 +105,13 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
             ps.executeUpdate();
         }
     }
+    public void deleteByUsuarioID (Integer id_usuario) throws SQLException {
+        String sql = "DELETE FROM credenciales WHERE id_usuario = ?";
+        try (Connection connection = ConexionSQLite.getConnection();
+        PreparedStatement ps = connection.prepareStatement(sql)) {
+
+            ps.setInt(1, id_usuario);
+            ps.executeUpdate();
+        }
+    }
 }

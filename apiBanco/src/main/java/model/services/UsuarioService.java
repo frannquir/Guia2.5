@@ -10,7 +10,6 @@ import model.repositories.impl.CredencialRepository;
 import model.repositories.impl.CuentaRepository;
 import model.repositories.impl.UsuarioRepository;
 
-import java.sql.Array;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,8 +47,8 @@ public class UsuarioService {
         try {
             boolean dniExistente = usuarioRepository.findAll()
                     .stream()
-                    .anyMatch(u-> u.getDni().equals(dni));
-            if(dniExistente) {
+                    .anyMatch(u -> u.getDni().equals(dni));
+            if (dniExistente) {
                 System.out.println("Ya existe un usuario con este DNI.");
                 return nuevoUsuario;
             }
@@ -218,6 +217,38 @@ public class UsuarioService {
             System.out.println("Error al actualizar Usuario " + e.getMessage());
             return false;
         }
+    }
+
+
+    public void eliminarUsuario(CredencialEntity credencial, Integer id) throws NoAutorizadoException {
+        try {
+            if (usuarioRepository.findByID(id).isEmpty()) {
+                System.out.println("No se encontro el usuario.");
+            }
+            switch (credencial.getPermiso()) {
+                case CLIENTE -> { // Auto-eliminacion
+                    System.out.println("Como CLIENTE, solo podés eliminarte a vos mismo.");
+                    eliminarDepedendencias(credencial.getUsuarioId());
+                }
+                case GESTOR -> {
+                    if (usuarioRepository.findByID(id).get().getCredencial().getPermiso() == EPermiso.ADMINISTRADOR) {
+                        throw new NoAutorizadoException("Si sos GESTOR no podés eliminar ADMINISTRADOR");
+                    } else {
+                        eliminarDepedendencias(id);
+                    }
+                }
+                case ADMINISTRADOR -> eliminarDepedendencias(id);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al eliminar el usuario");
+        }
+    }
+
+    private void eliminarDepedendencias(Integer id) throws SQLException {
+        usuarioRepository.deleteByID(id);
+        credencialRepository.deleteByUsuarioID(id);
+        cuentaRepository.deleteByUsuarioID(id);
+        System.out.println("Usuario y cuentas eliminado.");
     }
 }
 

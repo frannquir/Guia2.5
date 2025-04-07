@@ -49,11 +49,12 @@ public class App {
                 mostrarMenu();
                 opcion = leerOpcion(scanner);
 
+
                 switch (opcion) {
                     case 1 -> listarUsuarios();
                     case 2 -> buscarUsuario(scanner);
-//                    case 3 -> modificarUsuario(scanner);
-//                    case 4 -> eliminarUsuario(scanner);
+                    case 3 -> modificarUsuario(scanner);
+                    case 4 -> salir = eliminarUsuario(scanner); // Si el usuario se auto-elimino, lo deslogueo.
 //                    case 5 -> listarCuentasUsuario(scanner);
 //                    case 6 -> obtenerSaldoUsuario(scanner);
 //                    case 7 -> realizarDeposito(scanner);
@@ -142,16 +143,17 @@ public class App {
         String username = scanner.nextLine();
         System.out.println("Contraseña: ");
         String password = scanner.nextLine();
-
-        usuarioActual = usuarioService.iniciarSesion(username, password);
-        if (usuarioActual.getId() != null) {
-            credencialActual = usuarioActual.getCredencial();
-            System.out.println("Bienvenido, " + credencialActual.getUsername() + "!");
-            return true;
-        } else {
+        try {
+            usuarioActual = usuarioService.iniciarSesion(username, password);
+            if (usuarioActual.getId() != null) {
+                credencialActual = usuarioActual.getCredencial();
+                System.out.println("Bienvenido, " + credencialActual.getUsername() + "!");
+                return true;
+            }
+        } catch (NoSuchElementException e) {
             System.out.println("Credenciales incorrectas.");
-            return false;
         }
+        return false;
     }
 
     private void listarUsuarios() {
@@ -230,6 +232,7 @@ public class App {
 
         try {
             if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                System.out.println("Como CLIENTE, solo podes modificar tus datos.");
                 usuarioAModificar = usuarioActual; // Si el usuario actual es CLIENTE, solo puede modificar sus datos.
             } else {
                 System.out.println("Ingrese el ID del usuario a modificar: ");
@@ -275,6 +278,27 @@ public class App {
         } catch (NoSuchElementException e) {
             System.out.println("Usuario no encontrado");
         }
+    }
+    private boolean eliminarUsuario(Scanner scanner) {
+        System.out.println("\n==== ELIMINAR USUARIO ====");
+        try {
+            System.out.println("Ingrese la DNI del Usuario a eliminar: ");
+            Integer id = scanner.nextInt();
+            scanner.nextLine();
+            System.out.println("Está seguro que desea eliminar la ID " + id + "? s/n");
+            String opcion = scanner.nextLine();
+            if(opcion.toLowerCase().startsWith("s")) {
+                usuarioService.eliminarUsuario(credencialActual, id);
+                if(usuarioActual.getId().equals(id)) {
+                    return true;
+                }
+            }
+        } catch (NoAutorizadoException e) {
+            System.out.println(e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println("No se encontro el usuario.");
+        }
+        return false;
     }
 }
 

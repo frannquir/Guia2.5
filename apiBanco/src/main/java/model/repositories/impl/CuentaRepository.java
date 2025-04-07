@@ -35,17 +35,6 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
 
     @Override
     public void save(CuentaEntity entity) throws SQLException {
-        if (entity.getTipo() == ETipo.CAJA_AHORRO) {
-            String checkSQL = "SELECT COUNT(*) FROM cuentas WHERE id_usuario = ? AND tipo 'CAJA_AHORRO'";
-            try (Connection connection = ConexionSQLite.getConnection();
-                 PreparedStatement ps = connection.prepareStatement(checkSQL)) {
-                ps.setInt(1, entity.getUsuarioId());
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.getInt(1) >= 1)
-                        throw new SQLException("El usuario ya tiene una caja de ahorro.");
-                }
-            }
-        }
         String sql = "INSERT INTO cuentas (id_usuario, tipo, saldo) VALUES (?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -92,6 +81,15 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
         }
     }
 
+    public void deleteByUsuarioID(Integer id_usuario) throws SQLException {
+        String sql = "DELETE FROM cuentas WHERE id_usuario = ?";
+        try (Connection connection = ConexionSQLite.getConnection();
+        PreparedStatement ps = connection.prepareStatement(sql)) {
+
+            ps.setInt(1, id_usuario);
+            ps.executeUpdate();
+        }
+    }
 
     @Override
     public void deleteByID(Integer id) throws SQLException {
