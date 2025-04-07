@@ -5,11 +5,15 @@ import model.entities.enums.ETipo;
 import model.entities.impl.CredencialEntity;
 import model.entities.impl.CuentaEntity;
 import model.entities.impl.UsuarioEntity;
+import model.exceptions.NoAutorizadoException;
 import model.repositories.impl.CredencialRepository;
 import model.repositories.impl.CuentaRepository;
 import model.repositories.impl.UsuarioRepository;
 
+import java.sql.Array;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -42,12 +46,19 @@ public class UsuarioService {
     public UsuarioEntity registrarUsuario(String nombre, String apellido, String dni, String email) {
         var nuevoUsuario = new UsuarioEntity();
         try {
+            boolean dniExistente = usuarioRepository.findAll()
+                    .stream()
+                    .anyMatch(u-> u.getDni().equals(dni));
+            if(dniExistente) {
+                System.out.println("Ya existe un usuario con este DNI.");
+                return nuevoUsuario;
+            }
             // Creación de Usuario
             nuevoUsuario = new UsuarioEntity(
                     nombre, apellido, dni, email
             );
             usuarioRepository.save(nuevoUsuario);
-
+            System.out.println("Creando Usuario..");
             // Creación de Credencial
             CredencialEntity nuevaCredencial = new CredencialEntity(
                     nuevoUsuario.getId(),
@@ -56,7 +67,8 @@ public class UsuarioService {
                     EPermiso.CLIENTE
             );
             credencialRepository.save(nuevaCredencial);
-
+            System.out.println("Creando Credencial..");
+            nuevoUsuario.setCredencial(nuevaCredencial);
             // Creación de Cuenta
             CuentaEntity nuevaCuenta = new CuentaEntity(
                     0f,
@@ -64,7 +76,8 @@ public class UsuarioService {
                     nuevoUsuario.getId()
             );
             cuentaRepository.save(nuevaCuenta);
-
+            System.out.println("Creando Cuenta..");
+            nuevoUsuario.setCuentas(List.of(nuevaCuenta));
         } catch (SQLException e) {
             System.err.println("Error al registrar usuario: " + e.getMessage());
         }
@@ -92,12 +105,119 @@ public class UsuarioService {
                     .findFirst()
                     .orElseThrow(NoSuchElementException::new);
 
-            usuario = usuarioRepository.findByID(credencial.getUsuarioId())
+            Integer id = credencial.getUsuarioId();
+            // Busco el usuario
+            usuario = usuarioRepository.findByID(id)
                     .orElseThrow(NoSuchElementException::new);
+            // Asigno su credencial
+            usuario.setCredencial(credencial);
+            // Busco las cuentas del usuario
+            List<CuentaEntity> cuentasUsuario = cuentaRepository.findAll()
+                    .stream()
+                    .filter(c -> c.getUsuarioId().equals(id))
+                    .toList();
+            // Asigno sus cuentas
+            usuario.setCuentas(cuentasUsuario);
+
         } catch (SQLException e) {
             System.err.println("Error al iniciar sesión: " + e.getMessage());
         }
         return usuario;
+    }
+
+
+    public List<UsuarioEntity> listarUsuarios(CredencialEntity credencial) throws NoAutorizadoException {
+        if (credencial.getPermiso() == EPermiso.GESTOR || credencial.getPermiso() == EPermiso.ADMINISTRADOR) {
+            try {
+                return usuarioRepository.findAll();
+            } catch (SQLException e) {
+                System.out.println("Error al listar usuarios " + e.getMessage());
+                return new ArrayList<>();
+            }
+        } else {
+            throw new NoAutorizadoException("Los CLIENTES no pueden ver el listado de Usuarios.");
+        }
+    }
+
+    public UsuarioEntity buscarPorId(CredencialEntity credencial, Integer id) throws NoAutorizadoException {
+        var usuario = new UsuarioEntity();
+        if (credencial.getPermiso() == EPermiso.GESTOR || credencial.getPermiso() == EPermiso.ADMINISTRADOR) {
+            try {
+                Optional<UsuarioEntity> usuarioOpt = usuarioRepository.findByID(id);
+                if (usuarioOpt.isPresent()) {
+                    usuario = usuarioOpt.get();
+                } else {
+                    throw new NoSuchElementException("El usuario no fue encontrado.");
+                }
+            } catch (SQLException e) {
+                System.out.println("Error al buscar el usuario por ID");
+            }
+        } else {
+            throw new NoAutorizadoException("Los CLIENTES no pueden buscar por ID.");
+        }
+        return usuario;
+    }
+
+    public UsuarioEntity buscarPorDni(CredencialEntity credencial, String dni) throws NoAutorizadoException {
+        var usuario = new UsuarioEntity();
+        if (credencial.getPermiso() == EPermiso.GESTOR || credencial.getPermiso() == EPermiso.ADMINISTRADOR) {
+            try {
+                usuario = usuarioRepository.findAll()
+                        .stream()
+                        .filter(u -> u.getDni().equals(dni))
+                        .findFirst()
+                        .orElseThrow(NoSuchElementException::new);
+            } catch (SQLException e) {
+                System.out.println("Error al buscar usuario por DNI " + e.getMessage());
+            }
+        } else {
+            throw new NoAutorizadoException("Los CLIENTES no pueden buscar por DNI.");
+        }
+        return usuario;
+    }
+
+
+    public UsuarioEntity buscarPorEmail(CredencialEntity credencial, String email) throws NoAutorizadoException {
+        var usuario = new UsuarioEntity();
+        if (credencial.getPermiso() == EPermiso.GESTOR || credencial.getPermiso() == EPermiso.ADMINISTRADOR) {
+            try {
+                usuario = usuarioRepository.findAll()
+                        .stream()
+                        .filter(u -> u.getEmail().equals(email))
+                        .findFirst()
+                        .orElseThrow(NoSuchElementException::new);
+            } catch (SQLException e) {
+                System.out.println("Error al buscar usuario por Email " + e.getMessage());
+            }
+        } else {
+            throw new NoAutorizadoException("Los CLIENTES no pueden buscar por Email.");
+        }
+        return usuario;
+    }
+
+    public boolean actualizarUsuario(UsuarioEntity usuario, CredencialEntity credencialSolicitante) throws NoAutorizadoException {
+        try {
+            switch (credencialSolicitante.getPermiso()) {
+                case CLIENTE -> {
+                    if (!credencialSolicitante.getUsuarioId().equals(usuario.getId()))
+                        throw new NoAutorizadoException("Como CLIENTE, solo podes actualizar tus datos.");
+                }
+                case GESTOR -> {
+                    if (!usuario.getCredencial().getPermiso().equals(EPermiso.CLIENTE))
+                        throw new NoAutorizadoException("Como GESTOR, solo podes actualizar CLIENTES.");
+                }
+                case ADMINISTRADOR -> {
+                } // Admin puede actualizar cualquier usuario.
+
+                default -> throw new NoAutorizadoException("Permiso no reconocido");
+            }
+            // Si llegamos hasta aca, significa que los permisos son correctos.\
+            usuarioRepository.update(usuario);
+            return true;
+        } catch (SQLException e) {
+            System.out.println("Error al actualizar Usuario " + e.getMessage());
+            return false;
+        }
     }
 }
 

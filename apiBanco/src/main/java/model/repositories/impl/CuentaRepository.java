@@ -25,8 +25,8 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
 
     private Optional<CuentaEntity> resultToCuenta(ResultSet rs) throws SQLException {
         return Optional.of(new CuentaEntity(
-                rs.getInt("id"),
-                rs.getInt("usuarioId"),
+                rs.getInt("id_cuenta"),
+                rs.getInt("id_usuario"),
                 ETipo.valueOf(rs.getString("tipo")),
                 rs.getFloat("saldo"),
                 rs.getTimestamp("fecha_creacion").toLocalDateTime()
@@ -36,7 +36,7 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
     @Override
     public void save(CuentaEntity entity) throws SQLException {
         if (entity.getTipo() == ETipo.CAJA_AHORRO) {
-            String checkSQL = "SELECT COUNT(*) FROM cuentas WHERE usuarioId = ? AND tipo 'CAJA_AHORRO'";
+            String checkSQL = "SELECT COUNT(*) FROM cuentas WHERE id_usuario = ? AND tipo 'CAJA_AHORRO'";
             try (Connection connection = ConexionSQLite.getConnection();
                  PreparedStatement ps = connection.prepareStatement(checkSQL)) {
                 ps.setInt(1, entity.getUsuarioId());
@@ -46,13 +46,12 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
                 }
             }
         }
-        String sql = "INSERT INTO cuentas (usuarioId, tipo, saldo, fecha_creacion) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO cuentas (id_usuario, tipo, saldo) VALUES (?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, entity.getUsuarioId());
             ps.setString(2, entity.getTipo().name());
             ps.setFloat(3, entity.getSaldo());
-            ps.setTimestamp(4, Timestamp.valueOf(entity.getFecha_creacion()));
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next())
@@ -79,7 +78,7 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
 
     @Override
     public Optional<CuentaEntity> findByID(Integer id) throws SQLException {
-        String sql = "SELECT * FROM cuentas WHERE id = ?";
+        String sql = "SELECT * FROM cuentas WHERE id_cuenta = ?";
         try (Connection conn = ConexionSQLite.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -96,7 +95,7 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
 
     @Override
     public void deleteByID(Integer id) throws SQLException {
-        String sql = "DELETE FROM cuentas WHERE id = ?";
+        String sql = "DELETE FROM cuentas WHERE id_cuenta = ?";
         try (Connection conn = ConexionSQLite.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -107,7 +106,7 @@ public class CuentaRepository implements IRepository<CuentaEntity> {
 
     @Override
     public void update(CuentaEntity entity) throws SQLException {
-        String sql = "UPDATE cuentas SET saldo = ?, tipo = ? WHERE id = ?";
+        String sql = "UPDATE cuentas SET saldo = ?, tipo = ? WHERE id_cuenta = ?";
         try (Connection conn = ConexionSQLite.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 

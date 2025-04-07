@@ -23,8 +23,8 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     private Optional<CredencialEntity> resultToCredencial(ResultSet rs) throws SQLException {
         return Optional.of(new CredencialEntity(
-                rs.getInt("id"),
-                rs.getInt("usuarioID"),
+                rs.getInt("id_credencial"),
+                rs.getInt("id_usuario"),
                 rs.getString("username"),
                 rs.getString("password"),
                 EPermiso.valueOf(rs.getString("permiso"))
@@ -33,7 +33,7 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public void save(CredencialEntity entity) throws SQLException {
-        String sql = "INSERT INTO credenciales (usuarioId, username, password, permiso) " +
+        String sql = "INSERT INTO credenciales (id_usuario, username, password, permiso) " +
                 "VALUES (?, ?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -67,7 +67,7 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public Optional<CredencialEntity> findByID(Integer id) throws SQLException {
-        String sql = "SELECT * FROM credenciales WHERE id = ?";
+        String sql = "SELECT * FROM credenciales WHERE id_credencial = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -83,7 +83,7 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public void deleteByID(Integer id) throws SQLException {
-        String sql = "DELETE FROM credenciales WHERE id = ?";
+        String sql = "DELETE FROM credenciales WHERE id_credencial = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -93,8 +93,8 @@ public class CredencialRepository implements IRepository<CredencialEntity> {
 
     @Override
     public void update(CredencialEntity entity) throws SQLException {
-        String sql = "UPDATE credenciales SET usuarioId = ?, " +
-                "username = ?, password = ?, permiso = ? WHERE id = ?";
+        String sql = "UPDATE credenciales SET id_usuario = ?, " +
+                "username = ?, password = ?, permiso = ? WHERE id_credencial = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, entity.getUsuarioId());

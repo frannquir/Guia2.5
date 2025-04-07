@@ -22,7 +22,7 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
 
     private Optional<UsuarioEntity> resultToUsuario(ResultSet rs) throws SQLException {
         return Optional.of(new UsuarioEntity(
-                rs.getInt("id"),
+                rs.getInt("id_usuario"),
                 rs.getString("nombre"),
                 rs.getString("apellido"),
                 rs.getString("dni"),
@@ -34,7 +34,7 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
     @Override
     public void save(UsuarioEntity entity) throws SQLException {
         String sql = "INSERT INTO usuarios (nombre, apellido, dni, " +
-                "email, fecha_creacion) VALUES (?, ?, ?, ?, ?)";
+                "email) VALUES (?, ?, ?, ?)";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement
                      (sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -69,7 +69,7 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
 
     @Override
     public Optional<UsuarioEntity> findByID(Integer id) throws SQLException {
-        String sql = "SELECT * FROM usuarios WHERE id = ?";
+        String sql = "SELECT * FROM usuarios WHERE id_usuario = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -85,7 +85,7 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
 
     @Override
     public void deleteByID(Integer id) throws SQLException {
-        String sql = "DELETE FROM usuarios WHERE id = ?";
+        String sql = "DELETE FROM usuarios WHERE id_usuario = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -96,7 +96,7 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
     @Override
     public void update(UsuarioEntity entity) throws SQLException {
         String sql = "UPDATE usuarios SET nombre = ?, apellido = ?," +
-                " dni = ?, email = ?, fecha_creacion = ? WHERE id = ?";
+                " dni = ?, email = ?, fecha_creacion = ? WHERE id_usuario = ?";
         try (Connection connection = ConexionSQLite.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, entity.getNombre());

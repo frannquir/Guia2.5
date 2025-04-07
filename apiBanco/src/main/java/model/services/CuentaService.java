@@ -46,13 +46,17 @@ public class CuentaService {
         }
     }
 
-    public Optional<CuentaEntity> obtenerCuenta(Integer cuentaId) {
+    public CuentaEntity obtenerCuenta(Integer cuentaId) {
+        var cuenta = new CuentaEntity();
         try {
-            return cuentaRepository.findByID(cuentaId);
+            Optional<CuentaEntity> cuentaOpt = cuentaRepository.findByID(cuentaId);
+            if(cuentaOpt.isPresent()) {
+                cuenta = cuentaOpt.get();
+            }
         } catch (SQLException e) {
             System.out.println("Error al obtener cuenta por id " + e.getMessage());
-            return Optional.empty();
         }
+        return cuenta;
     }
 
     public boolean depositar(Integer cuentaId, float monto) {

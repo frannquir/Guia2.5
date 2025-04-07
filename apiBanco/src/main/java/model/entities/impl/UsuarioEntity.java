@@ -1,10 +1,14 @@
 package model.entities.impl;
 
-import java.time.LocalDate;
+import model.entities.enums.ETipo;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class UsuarioEntity {
     private Integer id;
@@ -14,6 +18,7 @@ public class UsuarioEntity {
     private String email;
     private LocalDateTime fecha_creacion;
     private List<CuentaEntity> cuentas;
+    private CredencialEntity credencial;
 
     public UsuarioEntity(Integer id, String nombre, String apellido,
                          String dni, String email, LocalDateTime fecha_creacion) {
@@ -23,25 +28,28 @@ public class UsuarioEntity {
         this.dni = dni;
         this.email = email;
         this.fecha_creacion = fecha_creacion;
-        cuentas = new ArrayList<>();
+        this.cuentas = new ArrayList<>();
     }
+
     public UsuarioEntity(String nombre, String apellido, String dni,
                          String email) {
         this.nombre = nombre;
         this.apellido = apellido;
-        this.dni =dni;
+        this.dni = dni;
         this.email = email;
-        cuentas = new ArrayList<>();
+        this.fecha_creacion = LocalDateTime.now();
+        this.cuentas = new ArrayList<>();
     }
+
     public UsuarioEntity() {
         this(0, "", "", "", "", null);
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -83,6 +91,37 @@ public class UsuarioEntity {
 
     public void setFecha_creacion(LocalDateTime fecha_creacion) {
         this.fecha_creacion = fecha_creacion;
+    }
+
+    public List<CuentaEntity> getCuentas() {
+        return cuentas;
+    }
+
+    public void setCuentas(List<CuentaEntity> cuentas) {
+        this.cuentas = cuentas;
+    }
+
+    public void addCuenta(CuentaEntity cuenta) {
+        this.cuentas.add(cuenta);
+    }
+
+    public CredencialEntity getCredencial() {
+        return credencial;
+    }
+
+    public void setCredencial(CredencialEntity credencial) {
+        this.credencial = credencial;
+    }
+
+    public Map<ETipo, List<CuentaEntity>> getCuentasPorTipo() {
+        return cuentas.stream()
+                .collect(Collectors.groupingBy(CuentaEntity::getTipo));
+    }
+
+    public float getSaldoTotal() {
+        return cuentas.stream()
+                .map(CuentaEntity::getSaldo)
+                .reduce(0f, Float::sum);
     }
 
     @Override
