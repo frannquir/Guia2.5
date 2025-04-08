@@ -100,7 +100,7 @@ public class UsuarioService {
             // Busco la credencial del usuario
             CredencialEntity credencial = credencialRepository.findAll()
                     .stream()
-                    .filter((c) -> c.getUsername().equals(username) && c.getPassword().equals(password))
+                    .filter((c) -> c.getUsername().equalsIgnoreCase(username) && c.getPassword().equals(password))
                     .findFirst()
                     .orElseThrow(NoSuchElementException::new);
 
@@ -175,6 +175,14 @@ public class UsuarioService {
         return usuario;
     }
 
+    private Integer buscarIdPorDni(String dni) throws SQLException, NoSuchElementException {
+        return usuarioRepository.findAll()
+                .stream()
+                .filter(u -> u.getDni().equals(dni))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("No existe usuario con DNI: " + dni))
+                .getId();
+    }
 
     public UsuarioEntity buscarPorEmail(CredencialEntity credencial, String email) throws NoAutorizadoException {
         var usuario = new UsuarioEntity();
@@ -210,7 +218,7 @@ public class UsuarioService {
 
                 default -> throw new NoAutorizadoException("Permiso no reconocido");
             }
-            // Si llegamos hasta aca, significa que los permisos son correctos.\
+            // Si llegamos hasta aca, significa que los permisos son correctos.
             usuarioRepository.update(usuario);
             return true;
         } catch (SQLException e) {
@@ -219,19 +227,21 @@ public class UsuarioService {
         }
     }
 
-
-    public void eliminarUsuario(CredencialEntity credencial, Integer id) throws NoAutorizadoException {
+    public void eliminarUsuario(CredencialEntity credencial, String dni) throws NoAutorizadoException {
         try {
-            if (usuarioRepository.findByID(id).isEmpty()) {
-                System.out.println("No se encontro el usuario.");
-            }
+            Integer id = buscarIdPorDni(dni);
+            UsuarioEntity usuarioAEliminar = usuarioRepository.findByID(id)
+                    .orElseThrow(() -> new NoSuchElementException("No se encontró el usuario con DNI: " + dni));
+
             switch (credencial.getPermiso()) {
                 case CLIENTE -> { // Auto-eliminacion
-                    System.out.println("Como CLIENTE, solo podés eliminarte a vos mismo.");
-                    eliminarDepedendencias(credencial.getUsuarioId());
+                    if (!credencial.getUsuarioId().equals(id)) {
+                        throw new NoAutorizadoException("Como CLIENTE, solo podés eliminarte a vos mismo.");
+                    }
+                    eliminarDepedendencias(id);
                 }
                 case GESTOR -> {
-                    if (usuarioRepository.findByID(id).get().getCredencial().getPermiso() == EPermiso.ADMINISTRADOR) {
+                    if (usuarioAEliminar.getCredencial().getPermiso() == EPermiso.ADMINISTRADOR) {
                         throw new NoAutorizadoException("Si sos GESTOR no podés eliminar ADMINISTRADOR");
                     } else {
                         eliminarDepedendencias(id);
@@ -240,7 +250,9 @@ public class UsuarioService {
                 case ADMINISTRADOR -> eliminarDepedendencias(id);
             }
         } catch (SQLException e) {
-            System.out.println("Error al eliminar el usuario");
+            System.out.println("Error al eliminar el usuario: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
         }
     }
 
@@ -250,5 +262,55 @@ public class UsuarioService {
         cuentaRepository.deleteByUsuarioID(id);
         System.out.println("Usuario y cuentas eliminado.");
     }
-}
 
+    public List<CuentaEntity> listarCuentasUsuario(CredencialEntity credencial, String dni) throws NoAutorizadoException {
+        try {
+            Integer id;
+
+            if (credencial.getPermiso() == EPermiso.CLIENTE) {
+                // Si es cliente, solo puede ver sus propias cuentas
+                id = credencial.getUsuarioId();
+                // Verificar que el DNI corresponda al usuario actual
+                UsuarioEntity usuario = usuarioRepository.findByID(id)
+                        .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
+                if (!usuario.getDni().equals(dni)) {
+                    throw new NoAutorizadoException("Como CLIENTE, solo puedes ver tus propias cuentas");
+                }
+            } else {
+                // Si es gestor o admin, puede ver cuentas de cualquier usuario
+                id = buscarIdPorDni(dni);
+            }
+
+            return cuentaRepository.findAll()
+                    .stream()
+                    .filter(cuenta -> cuenta.getUsuarioId().equals(id))
+                    .toList();
+
+        } catch (SQLException e) {
+            System.out.println("Error al listar cuentas de usuario: " + e.getMessage());
+            return new ArrayList<>();
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public Float obtenerSaldoUsuario(CredencialEntity credencial, String dni) throws NoAutorizadoException {
+        if (credencial.getPermiso() == EPermiso.CLIENTE) {
+            throw new NoAutorizadoException("Los CLIENTES solo pueden ver su saldo total.");
+        }
+        try {
+            if (usuarioRepository.findByDni(dni).isPresent()) {
+                UsuarioEntity usuario = usuarioRepository.findByDni(dni).get();
+                return usuario.getSaldoTotal();
+            } else {
+                throw new NoSuchElementException();
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al obtener saldo del usuario");
+        } catch (NoSuchElementException e) {
+            System.out.println("Usuario no encontrado");
+        }
+        return 0.0f;
+    }
+}

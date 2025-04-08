@@ -59,7 +59,7 @@ public class CuentaService {
         return cuenta;
     }
 
-    public boolean depositar(Integer cuentaId, float monto) {
+    public boolean depositar(Integer cuentaId, Float monto) {
         try {
             Optional<CuentaEntity> cuentaOpt = cuentaRepository.findByID(cuentaId);
             if (cuentaOpt.isEmpty()) return false;
@@ -75,7 +75,7 @@ public class CuentaService {
         }
     }
 
-    public boolean retirar(Integer cuentaId, float monto) {
+    public boolean retirar(Integer cuentaId, Float monto) {
         try {
             Optional<CuentaEntity> cuentaOpt = cuentaRepository.findByID(cuentaId);
             if (cuentaOpt.isEmpty() || cuentaOpt.get().getSaldo() < monto) return false;
@@ -90,7 +90,7 @@ public class CuentaService {
         }
     }
 
-    public boolean transferir(Integer origenId, Integer destinoId, float monto) {
+    public boolean transferir(Integer origenId, Integer destinoId, Float monto) {
         try {
             Optional<CuentaEntity> origenOpt = cuentaRepository.findByID(origenId);
             Optional<CuentaEntity> destinoOpt = cuentaRepository.findByID(destinoId);

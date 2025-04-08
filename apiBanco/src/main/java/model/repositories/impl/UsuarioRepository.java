@@ -83,6 +83,21 @@ public class UsuarioRepository implements IRepository<UsuarioEntity> {
         }
     }
 
+    public Optional<UsuarioEntity> findByDni(String dni) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE dni = ?";
+        try (Connection connection = ConexionSQLite.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, dni);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return resultToUsuario(rs);
+                } else {
+                    return Optional.empty();
+                }
+            }
+        }
+    }
+
     @Override
     public void deleteByID(Integer id) throws SQLException {
         String sql = "DELETE FROM usuarios WHERE id_usuario = ?";

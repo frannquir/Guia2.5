@@ -2,6 +2,7 @@ package ui;
 
 import model.entities.enums.EPermiso;
 import model.entities.impl.CredencialEntity;
+import model.entities.impl.CuentaEntity;
 import model.entities.impl.UsuarioEntity;
 import model.exceptions.NoAutorizadoException;
 import model.services.CredencialService;
@@ -49,14 +50,14 @@ public class App {
                 mostrarMenu();
                 opcion = leerOpcion(scanner);
 
-
+                cuentaService.depositar(14, 500.0f);
                 switch (opcion) {
                     case 1 -> listarUsuarios();
                     case 2 -> buscarUsuario(scanner);
                     case 3 -> modificarUsuario(scanner);
                     case 4 -> salir = eliminarUsuario(scanner); // Si el usuario se auto-elimino, lo deslogueo.
-//                    case 5 -> listarCuentasUsuario(scanner);
-//                    case 6 -> obtenerSaldoUsuario(scanner);
+                    case 5 -> listarCuentasUsuario(scanner);
+                    case 6 -> obtenerSaldoUsuario(scanner);
 //                    case 7 -> realizarDeposito(scanner);
 //                    case 8 -> realizarTransferencia(scanner);
 //                    case 9 -> visualizarUsuariosPorPermiso();
@@ -235,9 +236,9 @@ public class App {
                 System.out.println("Como CLIENTE, solo podes modificar tus datos.");
                 usuarioAModificar = usuarioActual; // Si el usuario actual es CLIENTE, solo puede modificar sus datos.
             } else {
-                System.out.println("Ingrese el ID del usuario a modificar: ");
-                Integer id = leerOpcion(scanner);
-                usuarioAModificar = usuarioService.buscarPorId(credencialActual, id);
+                System.out.println("Ingrese el DNI del usuario a modificar: ");
+                String dni = scanner.nextLine();
+                usuarioAModificar = usuarioService.buscarPorDni(credencialActual, dni);
             }
             System.out.println("\nDatos actuales del usuario:");
             System.out.println("Nombre: " + usuarioAModificar.getNombre());
@@ -279,26 +280,73 @@ public class App {
             System.out.println("Usuario no encontrado");
         }
     }
+
     private boolean eliminarUsuario(Scanner scanner) {
         System.out.println("\n==== ELIMINAR USUARIO ====");
         try {
-            System.out.println("Ingrese la DNI del Usuario a eliminar: ");
-            Integer id = scanner.nextInt();
-            scanner.nextLine();
-            System.out.println("Está seguro que desea eliminar la ID " + id + "? s/n");
+            System.out.println("Ingrese el DNI del Usuario a eliminar: ");
+            String dni = scanner.nextLine();
+            System.out.println("Está seguro que desea eliminar al usuario con DNI " + dni + "? s/n");
             String opcion = scanner.nextLine();
             if(opcion.toLowerCase().startsWith("s")) {
-                usuarioService.eliminarUsuario(credencialActual, id);
-                if(usuarioActual.getId().equals(id)) {
-                    return true;
+                usuarioService.eliminarUsuario(credencialActual, dni);
+                // Verificar si el usuario eliminado es el actual
+                if(usuarioActual.getDni().equals(dni)) {
+                    return true; // Indica que hay que cerrar sesión
                 }
             }
         } catch (NoAutorizadoException e) {
             System.out.println(e.getMessage());
         } catch (NoSuchElementException e) {
-            System.out.println("No se encontro el usuario.");
+            System.out.println("No se encontró el usuario.");
         }
         return false;
     }
-}
 
+    private void listarCuentasUsuario(Scanner scanner) {
+        System.out.println("\n==== LISTAR CUENTAS DE USUARIO ====");
+        try {
+            String dni;
+            if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                // Si es cliente, solo muestra sus propias cuentas
+                dni = usuarioActual.getDni();
+                System.out.println("Mostrando tus cuentas:");
+            } else {
+                // Si es gestor o admin, puede ver cuentas de cualquier usuario
+                System.out.println("Ingrese el DNI del usuario cuyas cuentas desea listar: ");
+                dni = scanner.nextLine();
+            }
+
+            List<CuentaEntity> cuentas = usuarioService.listarCuentasUsuario(credencialActual, dni);
+
+            if (cuentas.isEmpty()) {
+                System.out.println("El usuario no tiene cuentas registradas.");
+                return;
+            }
+
+            System.out.println("ID | Tipo | Saldo | Fecha Creación");
+            for (CuentaEntity cuenta : cuentas) {
+                System.out.println(cuenta.getId() + " | " +
+                        cuenta.getTipo().getTipo() + " | " +
+                        cuenta.getSaldo() + " | " +
+                        cuenta.getFecha_creacion());
+            }
+        } catch (NoAutorizadoException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+    private void obtenerSaldoUsuario(Scanner scanner){
+        System.out.println("\n==== OBTENER SALDO USUARIO ====");
+        try{
+            System.out.println("Ingrese el DNI del Usuario: ");
+            String dni = scanner.nextLine();
+            if(usuarioActual.getDni().equals(dni)) {
+                System.out.println("Saldo Total: $" + usuarioActual.getSaldoTotal());
+            } else {
+                System.out.println("Saldo Total: $" + usuarioService.obtenerSaldoUsuario(credencialActual, dni));
+            }
+        } catch (NoAutorizadoException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
