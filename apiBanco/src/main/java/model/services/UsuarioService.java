@@ -296,16 +296,27 @@ public class UsuarioService {
     }
 
     public Float obtenerSaldoUsuario(CredencialEntity credencial, String dni) throws NoAutorizadoException {
-        if (credencial.getPermiso() == EPermiso.CLIENTE) {
-            throw new NoAutorizadoException("Los CLIENTES solo pueden ver su saldo total.");
-        }
+        Float saldo;
         try {
-            if (usuarioRepository.findByDni(dni).isPresent()) {
-                UsuarioEntity usuario = usuarioRepository.findByDni(dni).get();
-                return usuario.getSaldoTotal();
+            Optional<UsuarioEntity> usuarioActualOpt = usuarioRepository.findByDni(dni);
+            Optional<UsuarioEntity> usuarioAObtenerOpt = usuarioRepository.findByID(credencial.getId());
+            if(usuarioAObtenerOpt.isPresent()) {
+                UsuarioEntity usuario = usuarioAObtenerOpt.get();
+                if(usuarioActualOpt.equals(usuarioAObtenerOpt)) { // cualquier usuario puede ver su saldo.
+                    saldo = usuario.getCuentas().stream().map(CuentaEntity::getSaldo).reduce(0f, Float::sum);
+                    return saldo;
+                } else {
+                    if(credencial.getPermiso() == EPermiso.CLIENTE) { // un cliente pide el saldo de otra cuenta
+                        throw new NoAutorizadoException("Los CLIENTES solo pueden ver su saldo.");
+                    } else { // admin y gestor pueden ver cualquier saldo
+                        saldo = usuario.getCuentas().stream().map(CuentaEntity::getSaldo).reduce(0f, Float::sum);
+                        return saldo;
+                    }
+                }
             } else {
                 throw new NoSuchElementException();
             }
+
         } catch (SQLException e) {
             System.out.println("Error al obtener saldo del usuario");
         } catch (NoSuchElementException e) {

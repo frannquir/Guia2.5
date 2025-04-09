@@ -13,7 +13,6 @@ public class CuentaEntity {
     private LocalDateTime fecha_creacion;
 
     public CuentaEntity(Float saldo, ETipo tipo, Integer usuarioId) {
-        this.fecha_creacion = LocalDateTime.now();
         this.saldo = saldo;
         this.tipo = tipo;
         this.usuarioId = usuarioId;

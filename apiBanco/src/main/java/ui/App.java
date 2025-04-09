@@ -9,6 +9,7 @@ import model.services.CredencialService;
 import model.services.CuentaService;
 import model.services.UsuarioService;
 
+import java.sql.SQLOutput;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -50,7 +51,6 @@ public class App {
                 mostrarMenu();
                 opcion = leerOpcion(scanner);
 
-                cuentaService.depositar(14, 500.0f);
                 switch (opcion) {
                     case 1 -> listarUsuarios();
                     case 2 -> buscarUsuario(scanner);
@@ -58,14 +58,14 @@ public class App {
                     case 4 -> salir = eliminarUsuario(scanner); // Si el usuario se auto-elimino, lo deslogueo.
                     case 5 -> listarCuentasUsuario(scanner);
                     case 6 -> obtenerSaldoUsuario(scanner);
-//                    case 7 -> realizarDeposito(scanner);
-//                    case 8 -> realizarTransferencia(scanner);
+                    case 7 -> realizarDeposito(scanner);
+                    case 8 -> realizarTransferencia(scanner);
 //                    case 9 -> visualizarUsuariosPorPermiso();
 //                    case 10 -> cantidadCuentasPorTipo();
 //                    case 11 -> usuarioConMayorSaldo();
 //                    case 12 -> listarUsuariosPorSaldo();
-//                    case 13 -> crearCuentaCorriente();
-//                    case 14 -> cambiarContrasena(scanner);
+                    case 13 -> crearCuentaCorriente(scanner);
+                  //  case 14 -> cambiarContrasena(scanner);
                     case 0 -> {
                         usuarioActual = null;
                         credencialActual = null;
@@ -340,13 +340,223 @@ public class App {
         try{
             System.out.println("Ingrese el DNI del Usuario: ");
             String dni = scanner.nextLine();
-            if(usuarioActual.getDni().equals(dni)) {
-                System.out.println("Saldo Total: $" + usuarioActual.getSaldoTotal());
+            Float saldo = usuarioService.obtenerSaldoUsuario(credencialActual, dni);
+            System.out.println("Saldo total actual: $"+ saldo);
+        } catch (NoAutorizadoException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+    private void realizarDeposito(Scanner scanner) {
+        System.out.println("\n==== REALIZAR DEPÓSITO ====");
+        try {
+            List<CuentaEntity> cuentasDisponibles;
+            if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                cuentasDisponibles = usuarioService.listarCuentasUsuario(credencialActual, usuarioActual.getDni());
+                System.out.println("Tus cuentas disponibles:");
             } else {
-                System.out.println("Saldo Total: $" + usuarioService.obtenerSaldoUsuario(credencialActual, dni));
+                System.out.println("Ingrese el DNI del usuario para el depósito: ");
+                String dni = scanner.nextLine();
+                cuentasDisponibles = usuarioService.listarCuentasUsuario(credencialActual, dni);
+                System.out.println("Cuentas disponibles del usuario con DNI " + dni + ":");
+            }
+
+            if (cuentasDisponibles.isEmpty()) {
+                System.out.println("No hay cuentas disponibles para el depósito");
+                return;
+            }
+
+            System.out.println("ID | Tipo | Saldo");
+            for (CuentaEntity cuenta : cuentasDisponibles) {
+                System.out.println(cuenta.getId() + " | " +
+                        cuenta.getTipo().getTipo() + " | " +
+                        cuenta.getSaldo());
+            }
+
+            System.out.println("Ingrese el ID de la cuenta para el depósito: ");
+            Integer cuentaId = leerOpcion(scanner);
+
+            boolean cuentaExiste = cuentasDisponibles.stream()
+                    .anyMatch(c -> c.getId().equals(cuentaId));
+
+            if (!cuentaExiste) {
+                System.out.println("La cuenta seleccionada no existe o no tienes acceso a ella");
+                return;
+            }
+
+            System.out.println("Ingrese el monto a depositar: ");
+            Float monto;
+            try {
+                monto = Float.parseFloat(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Monto inválido");
+                return;
+            }
+
+            boolean depositoExitoso = cuentaService.depositar(credencialActual, cuentaId, monto);
+
+            if (depositoExitoso) {
+                System.out.println("Depósito realizado con éxito");
+                if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                    List<CuentaEntity> cuentasActualizadas = cuentaService.listarCuentasUsuario(usuarioActual.getId());
+                    usuarioActual.setCuentas(cuentasActualizadas);
+                }
+            } else {
+                System.out.println("No se pudo realizar el depósito");
+            }
+
+        } catch (NoAutorizadoException e) {
+            System.out.println("Error de autorización: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private void realizarTransferencia(Scanner scanner) {
+        System.out.println("\n==== REALIZAR TRANSFERENCIA ====");
+        try {
+            List<CuentaEntity> cuentasOrigen;
+
+            if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                cuentasOrigen = usuarioService.listarCuentasUsuario(credencialActual, usuarioActual.getDni());
+                System.out.println("Tus cuentas disponibles (origen):");
+            } else {
+                System.out.println("Ingrese el DNI del usuario origen: ");
+                String dniOrigen = scanner.nextLine();
+                cuentasOrigen = usuarioService.listarCuentasUsuario(credencialActual, dniOrigen);
+                System.out.println("Cuentas disponibles del usuario con DNI " + dniOrigen + " (origen):");
+            }
+
+            if (cuentasOrigen.isEmpty()) {
+                System.out.println("No hay cuentas disponibles para la transferencia");
+                return;
+            }
+
+            System.out.println("ID | Tipo | Saldo");
+            for (CuentaEntity cuenta : cuentasOrigen) {
+                System.out.println(cuenta.getId() + " | " +
+                        cuenta.getTipo().getTipo() + " | " +
+                        cuenta.getSaldo());
+            }
+
+            System.out.println("Ingrese el ID de la cuenta origen: ");
+            Integer cuentaOrigenId = leerOpcion(scanner);
+
+            boolean cuentaOrigenExiste = cuentasOrigen.stream()
+                    .anyMatch(c -> c.getId().equals(cuentaOrigenId));
+
+            if (!cuentaOrigenExiste) {
+                System.out.println("La cuenta origen seleccionada no existe o no tienes acceso a ella");
+                return;
+            }
+
+            System.out.println("Ingrese el DNI del usuario destino: ");
+            String dniDestino = scanner.nextLine();
+
+            List<CuentaEntity> cuentasDestino;
+            try {
+                cuentasDestino = usuarioService.listarCuentasUsuario(credencialActual, dniDestino);
+            } catch (NoAutorizadoException e) {
+                if (credencialActual.getPermiso() == EPermiso.CLIENTE && !usuarioActual.getDni().equals(dniDestino)) {
+                    System.out.println("Ingrese directamente el ID de la cuenta destino: ");
+                    Integer cuentaDestinoId = leerOpcion(scanner);
+
+                    System.out.println("Ingrese el monto a transferir: ");
+                    Float monto;
+                    try {
+                        monto = Float.parseFloat(scanner.nextLine());
+                    } catch (NumberFormatException ex) {
+                        System.out.println("Monto inválido");
+                        return;
+                    }
+
+                    boolean transferenciaExitosa = cuentaService.transferir(
+                            credencialActual, cuentaOrigenId, cuentaDestinoId, monto);
+
+                    if (transferenciaExitosa) {
+                        System.out.println("Transferencia realizada con éxito");
+                        List<CuentaEntity> cuentasActualizadas = cuentaService.listarCuentasUsuario(usuarioActual.getId());
+                        usuarioActual.setCuentas(cuentasActualizadas);
+                    } else {
+                        System.out.println("No se pudo realizar la transferencia");
+                    }
+                    return;
+                } else {
+                    throw e;
+                }
+            }
+
+            if (cuentasDestino.isEmpty()) {
+                System.out.println("El usuario destino no tiene cuentas disponibles");
+                return;
+            }
+
+            System.out.println("Cuentas disponibles del usuario destino:");
+            System.out.println("ID | Tipo | Saldo");
+            for (CuentaEntity cuenta : cuentasDestino) {
+                System.out.println(cuenta.getId() + " | " +
+                        cuenta.getTipo().getTipo() + " | " +
+                        cuenta.getSaldo());
+            }
+
+            System.out.println("Ingrese el ID de la cuenta destino: ");
+            Integer cuentaDestinoId = leerOpcion(scanner);
+
+            boolean cuentaDestinoExiste = cuentasDestino.stream()
+                    .anyMatch(c -> c.getId().equals(cuentaDestinoId));
+
+            if (!cuentaDestinoExiste) {
+                System.out.println("La cuenta destino seleccionada no existe");
+                return;
+            }
+
+            System.out.println("Ingrese el monto a transferir: ");
+            Float monto;
+            try {
+                monto = Float.parseFloat(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Monto inválido");
+                return;
+            }
+
+            boolean transferenciaExitosa = cuentaService.transferir(
+                    credencialActual, cuentaOrigenId, cuentaDestinoId, monto);
+
+            if (transferenciaExitosa) {
+                System.out.println("Transferencia realizada con éxito");
+                if (credencialActual.getPermiso() == EPermiso.CLIENTE) {
+                    List<CuentaEntity> cuentasActualizadas = cuentaService.listarCuentasUsuario(usuarioActual.getId());
+                    usuarioActual.setCuentas(cuentasActualizadas);
+                }
+            } else {
+                System.out.println("No se pudo realizar la transferencia");
+            }
+
+        } catch (NoAutorizadoException e) {
+            System.out.println("Error de autorización: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+    private void crearCuentaCorriente (Scanner scanner) {
+        System.out.println("\n==== CREAR CUENTA CORRIENTE ====");
+
+        System.out.println("Ingrese la ID del usuario: ");
+        Integer id = scanner.nextInt();
+        scanner.nextLine();
+        System.out.println("Ingrese el monto inicial: ");
+        Float monto = scanner.nextFloat();
+        scanner.nextLine();
+
+        try {
+            if(cuentaService.crearCuenta(credencialActual, id, monto)) {
+                System.out.println("Cuenta creada.");
+                cuentaService.listarCuentasUsuario(id);
+            } else {
+                System.out.println("No se pudo crear tu cuenta.");
             }
         } catch (NoAutorizadoException e) {
             System.out.println(e.getMessage());
         }
+
     }
 }
