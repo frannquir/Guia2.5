@@ -7,20 +7,20 @@ import repositories.impl.CategoryRepository;
 import repositories.impl.GameRepository;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class GameService {
     private final GameRepository gameRepository;
+    private final CategoryRepository categoryRepository;
     @Getter
     private static final GameService instance = new GameService();
 
     private GameService  () {
         gameRepository = GameRepository.getInstance();
+        categoryRepository = CategoryRepository.getInstance();
     }
+
     public void saveGame (GameEntity game) {
         try {
             gameRepository.save(game);
@@ -74,11 +74,97 @@ public class GameService {
         }
     }
 
-    public void listGamesByCategory () {
-        try {
-            HashMap<Integer, GameEntity> gamesByCategory = gameRepository.findAll().stream()
-                    .collect(Collectors.groupingBy(game -> game.getCategoryId()));
+    public CategoryEntity categoryWithMostGames () {
+        try{
+            List<GameEntity> games = gameRepository.findAll();
+            if(games.isEmpty()) {
+                throw new NoSuchElementException("No games found");
+            }
 
+            Integer categoryWithMostGamesId = gameRepository.findAll()
+                    .stream()
+                    .collect(Collectors.groupingBy(GameEntity::getCategoryId, Collectors.counting()))
+                    .entrySet()
+                    .stream()
+                    .max(Map.Entry.comparingByValue())
+                    .orElseThrow(NoSuchElementException::new)
+                    .getKey();
+
+            return categoryRepository.findByID(categoryWithMostGamesId)
+                    .orElseThrow(NoSuchElementException::new);
+
+        } catch (SQLException e) {
+            System.out.println("Database error: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
         }
+        return CategoryEntity.builder()
+                .id(-1)
+                .name("N/A")
+                .build();
+    }
+    public List<GameEntity> listGamesByCategory (String name) {
+        try{
+            Integer categoryId = categoryRepository.findAll()
+                    .stream()
+                    .filter(c -> c.getName().equalsIgnoreCase(name))
+                    .findFirst()
+                    .orElseThrow(NoSuchElementException::new)
+                    .getId();
+
+            List<GameEntity> games = gameRepository.findAll()
+                    .stream()
+                    .filter(g -> g.getCategoryId().equals(categoryId))
+                    .toList();
+
+            if(games.isEmpty()) {
+                throw new NoSuchElementException("Games not found");
+            }
+            return games;
+        } catch (SQLException e) {
+            System.out.println("Database error: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
+        }
+        return List.of();
+    }
+
+    public Map<String, List<GameEntity>> findAllGamesCategory () {
+        try{
+            Map<Integer, String> categoryNames = findCategoryNames();
+            Map<Integer, List<GameEntity>> gamesMap = gamesToMapByCategoryID();
+
+            Map <String,List<GameEntity>> result = gamesMap.entrySet().stream()
+                    .collect(Collectors.toMap(key -> categoryNames.get(key.getKey()),
+                            Map.Entry::getValue));
+
+            System.out.println(result);
+            /*
+            return gameRepository.findAll()
+                    .stream()
+                    .collect(Collectors.groupingBy(game -> categoryNames
+                            .getOrDefault(game.getCategoryId(), "Uncategorized"),
+                            HashMap::new,
+                            Collectors.toList()));
+
+             */
+        } catch (SQLException e) {
+            System.out.println("Database error: " + e.getMessage());
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
+        }
+        return new HashMap<>();
+    }
+    private Map<Integer, String> findCategoryNames () throws SQLException {
+        return categoryRepository.findAll()
+                .stream()
+                .collect(Collectors.toMap(
+                        CategoryEntity::getId,
+                        CategoryEntity::getName));
+    }
+    private Map<Integer, List<GameEntity>> gamesToMapByCategoryID () throws SQLException {
+        return gameRepository.findAll()
+                .stream()
+                .collect(Collectors.groupingBy(GameEntity::getCategoryId));
     }
 }

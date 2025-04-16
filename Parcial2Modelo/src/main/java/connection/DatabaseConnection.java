@@ -8,7 +8,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    private static final String URL = "jdbc:sqlite:biblioteca.db";
+    private static final String URL = "jdbc:sqlite:games.db";
     private static final DataSource datasource;
     static {
         HikariConfig config = new HikariConfig();
